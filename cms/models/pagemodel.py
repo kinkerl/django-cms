@@ -23,7 +23,7 @@ from django.utils.translation import get_language, ugettext_lazy as _
 from menus.menu_pool import menu_pool
 from mptt.models import MPTTModel
 from os.path import join
-
+from django.conf import settings
 
 class Page(MPTTModel):
     """
@@ -178,6 +178,16 @@ class Page(MPTTModel):
             from titlemodels import Title
 
             Title.objects.filter(id__in=old_titles.values()).delete()
+
+    def _copy_additionals(self, target):
+        old_titles = dict(target.extended_fields.values_list('language', 'pk'))
+        for title in self.extended_fields.all():
+            # If an old title exists, overwrite. Otherwise create new
+            title.pk = old_titles.pop(title.language, None)
+            title.page = target
+            title.save()
+        if old_titles:
+            settings.CMS_ADDITIONAL_MODEL_CLASS.objects.filter(id__in=old_titles.values()).delete()
 
     def _copy_contents(self, target):
         """
@@ -421,6 +431,7 @@ class Page(MPTTModel):
             # The target page now has a pk, so can be used as a target
             self._copy_titles(public_page)
             self._copy_contents(public_page)
+            self._copy_additionals(public_page)
 
             # invalidate the menu for this site
             menu_pool.clear(site_id=self.site_id)
@@ -533,6 +544,7 @@ class Page(MPTTModel):
             self.move_to(public.parent.publisher_draft)
         public._copy_contents(self)
         public._copy_attributes(self)
+        public._copy_additionals(self)
         self.published = True
         self.publisher_state = self.PUBLISHER_STATE_DEFAULT
         self._publisher_keep_state = True

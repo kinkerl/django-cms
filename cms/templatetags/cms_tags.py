@@ -373,6 +373,46 @@ class PageAttribute(AsTag):
 register.tag(PageAttribute)
 
 
+
+
+class PageAdditional(AsTag):
+    """
+    This Tag retrieves the additional information from a page's PageAdditionsModel
+    """
+
+    name = 'page_additional'
+    options = Options(
+        Argument('name', resolve=False),
+        Argument('page_lookup', required=False, default=None),
+        'as',
+        Argument('varname', required=False, resolve=False)
+    )
+
+    valid_attributes = [
+        "subline",
+    ]
+
+    def get_value(self, context, name, page_lookup):
+        """
+        this function gets the page, gets the PageAdditionsModel and tries to get the desired attribute
+        """
+        if not 'request' in context:
+            return ''
+        name = name.lower()
+        request = context['request']
+        language = get_language_from_request(request)
+        page = _get_page_by_untyped_arg(page_lookup, request, get_site_id(None))
+        pageaddmodel = settings.CMS_ADDITIONAL_MODEL_CLASS.objects.filter(language=language, page=page)
+        if pageaddmodel and len(pageaddmodel) == 1:
+            return getattr(pageaddmodel[0], name)
+        return ''
+
+
+register.tag(PageAdditional)
+
+
+
+
 class CleanAdminListFilter(InclusionTag):
     template = 'admin/filter.html'
     name = 'clean_admin_list_filter'

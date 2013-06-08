@@ -24,7 +24,7 @@ from django.forms.widgets import HiddenInput
 from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _, get_language
 from menus.menu_pool import menu_pool
-
+from django.conf import settings
 
 
 
@@ -164,14 +164,18 @@ class PageForm(PageAddForm):
         help_text=_('A description of the page sometimes used by search engines.'))
     meta_keywords = forms.CharField(label='Keywords meta tag', max_length=255, required=False,
         help_text=_('A list of comma seperated keywords sometimes used by search engines.'))
-    
+ 
+    # THIS IS JUST FOR A TEST. DELETE ME ASAP
+    subline = forms.CharField(label=_('ADMIN_SUBLINE_LABEL'), required=False, widget=forms.Textarea, help_text=_('ADMIN_SUBLINE_HELP'))
+
+
     def __init__(self, *args, **kwargs):
         super(PageForm, self).__init__(*args, **kwargs)
         if 'navigation_extenders' in self.fields:
             self.fields['navigation_extenders'].widget = forms.Select({}, [('', "---------")] + menu_pool.get_menus_by_attribute("cms_enabled", True))
         if 'application_urls' in self.fields:
             self.fields['application_urls'].choices = [('', "---------")] + apphook_pool.get_apphooks()
-            
+
     def clean(self):
         cleaned_data = super(PageForm, self).clean()
         if 'reverse_id' in self.fields:
@@ -188,6 +192,7 @@ class PageForm(PageAddForm):
             is_valid_url(url,self.instance)
             # TODO: Check what happens if 'overwrite_url' is NOT in self.fields
             return url
+
 
 class PagePermissionInlineAdminForm(forms.ModelForm):
     """

@@ -8,7 +8,7 @@ from cms.utils.i18n import get_fallback_languages
 from django.contrib.sites.models import Site
 from django.db import models
 from django.db.models import Q
-
+from django.conf import settings
 
 class PageManager(PublisherManager):
     """Use draft() and public() methods for accessing the corresponding
@@ -478,3 +478,36 @@ class PageModeratorStateManager(models.Manager):
         from cms.models import PageModeratorState
 
         return self.filter(action=PageModeratorState.ACTION_DELETE)
+
+from cms.publisher import PublisherManager
+
+
+
+class PageAdditionalManager(PublisherManager):
+    """
+    RelatedManager with form saving
+    """
+
+    def set_or_create(self, request, page, form, language):
+        """
+        set or create a title for a particular page and language
+        """
+        cleaned_data = form.cleaned_data
+        try:
+            obj = self.get(page=page, language=language)
+        except self.model.DoesNotExist:
+            data = {}
+            for name in settings.CMS_ADDITIONAL_MODEL_ATTRIBUTES:
+                if name in cleaned_data:
+                    data[name] = cleaned_data[name]
+            data['page'] = page
+            data['language'] = language
+
+            return self.create(**data)
+
+        for name in settings.CMS_ADDITIONAL_MODEL_ATTRIBUTES:
+            value = cleaned_data.get(name, None)
+            setattr(obj, name, value)
+
+        obj.save()
+        return obj

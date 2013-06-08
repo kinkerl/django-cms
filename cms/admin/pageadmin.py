@@ -114,6 +114,9 @@ def contribute_fieldsets(cls):
             'fields': advanced_fields,
             'classes': ('collapse',),
         }),
+        (_('Additional Attributes'), {
+            'fields': settings.CMS_ADDITIONAL_MODEL_ATTRIBUTES
+        }),
     ]
 
     if get_cms_setting('SEO_FIELDS'):
@@ -139,6 +142,7 @@ def contribute_list_filter(cls):
 
 class PageAdmin(ModelAdmin):
     form = PageForm
+   
     # TODO: add the new equivalent of 'cmsplugin__text__body' to search_fields'
     search_fields = ('title_set__slug', 'title_set__title', 'reverse_id')
     revision_form_template = "admin/cms/page/revision_form.html"
@@ -286,6 +290,12 @@ class PageAdmin(ModelAdmin):
             form,
             language,
         )
+        settings.CMS_ADDITIONAL_MODEL_CLASS.objects.set_or_create(
+            request,
+            obj,
+            form,
+            language,
+        )
 
     def get_fieldsets(self, request, obj=None):
         """
@@ -336,6 +346,18 @@ class PageAdmin(ModelAdmin):
                 self.exclude.remove('soft_root')
 
             form = super(PageAdmin, self).get_form(request, obj, **kwargs)
+
+            pageaddmodel = settings.CMS_ADDITIONAL_MODEL_CLASS.objects.filter(language=language, page=obj)
+            for name in settings.CMS_ADDITIONAL_MODEL_ATTRIBUTES:
+                if obj and pageaddmodel and len(pageaddmodel) == 1:
+                    form.base_fields[name].initial = getattr(pageaddmodel[0], name)
+                else:
+                    try:
+                        form.base_fields[name].initial = ''
+                    except Exception:
+                        pass
+        
+
             version_id = None
             versioned = False
             if "history" in request.path or 'recover' in request.path:
